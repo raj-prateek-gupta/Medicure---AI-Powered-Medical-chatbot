@@ -1,0 +1,20 @@
+# --- Core AI Frameworks ---
+langchain==0.3.26
+langchain-community==0.3.26
+langchain-openai==0.3.24
+langchain-pinecone==0.2.8
+
+# --- LLM & Embedding Support ---
+sentence-transformers==4.1.0
+
+# --- Data Handling ---
+pypdf==5.6.1
+
+# --- Environment & Config ---
+python-dotenv==1.1.0
+
+# --- Backend Framework ---
+flask==3.1.1
+
+# --- Local Editable Install ---
+-e .
