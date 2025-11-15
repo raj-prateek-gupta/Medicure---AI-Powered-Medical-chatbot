@@ -4,6 +4,11 @@ langchain-community==0.3.26
 langchain-openai==0.3.24
 langchain-pinecone==0.2.8
 
+# Hugging Face Integration
+langchain-huggingface
+transformers
+huggingface-hub
+
 # --- LLM & Embedding Support ---
 sentence-transformers==4.1.0
 
