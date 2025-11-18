@@ -4,6 +4,10 @@ from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 
 
+# ----------------------------------------
+#         Document Processing Helpers
+# ----------------------------------------
+
 def load_data_file(data):
   
   loader = DirectoryLoader(
@@ -14,6 +18,10 @@ def load_data_file(data):
 
   document = loader.load()
   return document
+
+# ----------------------------------------
+#         extrating content and source 
+# ----------------------------------------
 
 def extract_page_content_and_source(docs):
     final_docs = []
@@ -27,6 +35,10 @@ def extract_page_content_and_source(docs):
         )
     return final_docs
 
+# ----------------------------------------
+#         splitting documents into chunks
+# ----------------------------------------
+
 def split_documents(docs):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
@@ -35,6 +47,10 @@ def split_documents(docs):
 
     chunks = splitter.split_documents(docs)
     return chunks
+
+# ----------------------------------------
+#         Loading Embedding Model
+# ----------------------------------------
 
 def load_embedding_model():
     """
