@@ -83,8 +83,8 @@ rag_chain = (
     | StrOutputParser()
 )
 
-test_docs = retriever.invoke("What is fever?")
-print("TEST RETRIEVER OUTPUT:", type(test_docs), test_docs[:1])
+# test_docs = retriever.invoke("What is fever?")
+# print("TEST RETRIEVER OUTPUT:", type(test_docs), test_docs[:1])
 
 
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 <head>
     <title>Medicure AI Chatbot</title>
@@ -19,5 +19,48 @@
 
 <script src="/static/index.js"></script>
 </body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicure AI Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <div class="chat-container">
+
+         <!-- Header  -->
+        <header class="chat-header">
+            <h2>🩺 Medicure – AI Medical Assistant</h2>
+            <p>Your personal health guidance companion</p>
+        </header>
+
+        <!-- Chat Messages  -->
+        <div id="chat-box" class="chat-box"></div>
+
+        <!-- Bot Typing Animation -->
+        <div id="typing" class="typing hidden">
+            <span></span><span></span><span></span>
+        </div>
+
+        <!-- Input Box -->
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Describe your symptoms or ask a medical question...">
+            <button id="send-btn">Send</button>
+        </div>
+
+    </div>
+
+    <script src="/static/index.js"></script>
+</body>
 </html>
-cle
+
+
+
+
+
