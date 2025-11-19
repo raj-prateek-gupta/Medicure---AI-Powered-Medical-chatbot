@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI, Request
+import logging
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -7,36 +8,42 @@ from dotenv import load_dotenv
 
 # LangChain imports
 from langchain_pinecone import PineconeVectorStore
-from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.chains.combine_documents.stuff import create_stuff_documents_chain
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
 # Local imports
 from src.helper import load_embedding_model
-from src.prompt import prompt
+from src.prompt import prompt   # ensure this is a ChatPromptTemplate
 
-# ----------------------------------------
-#         INITIAL SETUP
-# ----------------------------------------
+# ---------------------------------------------------------
+#            INITIAL SETUP
+# ---------------------------------------------------------
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Serve static files (CSS, JS)
+# Serve static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# HTML templates folder
+# HTML templates
 templates = Jinja2Templates(directory="templates")
 
 # Environment variables
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-HUGGINGFACE_ACCESS_TOKEN = os.getenv("HUGGINGFACE_ACCESS_TOKEN")
+PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
-os.environ["HUGGINGFACE_ACCESS_TOKEN"] = HUGGINGFACE_ACCESS_TOKEN
+if not PINECONE_API_KEY:
+    logger.warning("PINECONE_API_KEY not found in environment.")
+if not GROQ_API_KEY:
+    logger.warning("GROQ_API_KEY not found in environment.")
+
+os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY or ""
+os.environ["GROQ_API_KEY"] = GROQ_API_KEY or ""
 
 # Load embedding model
 embedding = load_embedding_model()
@@ -53,50 +60,77 @@ retriever = vector_store.as_retriever(
     search_kwargs={"k": 3}
 )
 
+# ---------------------------------------------------------
+#             Language Model (Groq)
+# ---------------------------------------------------------
 
-# Hugging Face LLM
-llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-3.1-8B-Instruct",
-    task="text-generation",
-    huggingfacehub_api_token=HUGGINGFACE_ACCESS_TOKEN,
+llm = ChatGroq(
+    groq_api_key=GROQ_API_KEY,
+    model_name="llama-3.3-70b-versatile"
 )
 
-model = ChatHuggingFace(llm=llm)
+model = llm  # assuming this works as runnable
 
-# Build QA chain
-QA_chain = create_stuff_documents_chain(
-    llm=model,
-    prompt=prompt
+# ---------------------------------------------------------
+#        Manual “Stuff Documents” Chain Implementation
+# ---------------------------------------------------------
+
+def format_docs(docs):
+    try:
+        return "\n\n".join([doc.page_content for doc in docs])
+    except Exception as e:
+        logger.exception("Error formatting docs: %s", e)
+        return ""
+
+# Define a QA chain using LCEL style
+QA_chain = (
+    {
+        "context": lambda x: format_docs(x["context"]),
+        "question": lambda x: x["question"]
+    }
+    | prompt
+    | model
 )
 
-# ----------------------------------------
-#         LCEL RAG PIPELINE
-# ----------------------------------------
-
+# ---------------------------------------------------------
+#            RAG PIPELINE Setup
+# ---------------------------------------------------------
 
 rag_chain = (
     {
         "question": RunnablePassthrough(),
-        "context": retriever 
+        "context": retriever
     }
     | QA_chain
     | StrOutputParser()
 )
 
-# ----------------------------------------
+# ---------------------------------------------------------
 #              ROUTES
-# ----------------------------------------
+# ---------------------------------------------------------
 
 @app.get("/")
 def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-
 class ChatRequest(BaseModel):
     query: str
 
-
 @app.post("/chat")
 def chat_api(request_data: ChatRequest):
-    response = rag_chain.invoke(request_data.query)
-    return {"answer": response}
+    try:
+        user_question = request_data.query
+        result = rag_chain.invoke(user_question)
+        return {"answer": str(result)}
+    except Exception as e:
+        logger.exception("Error in /chat endpoint: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error. Please try again.")
+
+# ---------------------------------------------------------
+#          Production Entrypoint for Uvicorn/Render
+# ---------------------------------------------------------
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
